@@ -6,6 +6,7 @@ import {
   ChangeEvent,
 } from "react";
 import { Card, Input, InputLabel, Button, CardContent } from "@mui/material";
+import axios from "axios";
 import "./App.css";
 import Grid from "@mui/material/Grid";
 import Dropzone from "./Components/Dropzone";
@@ -25,10 +26,14 @@ const pageStyle: CSSProperties = {
   alignItems: "center",
 };
 
+const apiURL = "http://localhost:4321/";
+
 // TODO - Fix theme (Font, colors, etc...)
 
 function App() {
   const [file, setFile] = useState<File>();
+  const [sendFile, setSendFile] = useState<File>();
+  const [error, setError] = useState("No Errors");
 
   const [style, setStyle] = useState({
     height: window.innerHeight,
@@ -63,7 +68,7 @@ function App() {
     const file = e.dataTransfer.items[0].getAsFile();
     if (file == null) return;
     console.log(file);
-    setFile(file);
+    setFile(() => file);
     // setUploaded((prev) => !prev);
   };
 
@@ -83,7 +88,7 @@ function App() {
     }
 
     console.log(file);
-    setFile(file);
+    setFile(() => file);
   };
 
   // TODO - Send to server
@@ -92,7 +97,8 @@ function App() {
       console.log("Err");
       return;
     }
-    alert(file.name);
+
+    setSendFile(() => file);
   };
 
   useEffect(() => {
@@ -103,6 +109,18 @@ function App() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  useEffect(() => {
+    if (sendFile == undefined) return;
+
+    console.log(`sending: ${sendFile.name}`);
+    const data = new FormData();
+    data.append("file", sendFile, `${sendFile.name}`);
+    axios.post(`${apiURL}uploadFile`, data).then((res) => {
+      // console.log(res.statusText);
+      setError(res.statusText);
+    });
+  }, [sendFile]);
 
   const cardStyle = {
     minHeight: "200px",
@@ -206,6 +224,10 @@ function App() {
           </animated.div>
         )
       )}
+      <div style={{ position: "absolute", color: "white", bottom: "20%" }}>
+        {" "}
+        {error}
+      </div>
     </div>
   );
 }

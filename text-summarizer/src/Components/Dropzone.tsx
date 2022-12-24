@@ -45,7 +45,7 @@ const Dropzone: React.FC<DropzoneProps> = ({ fileHandler }) => {
   } = useDropzone({
     noKeyboard: true,
     noClick: true,
-    accept: { "image/*": [] },
+    accept: { "image/*": [], "text/plain": [] },
   });
 
   const style = useMemo(
