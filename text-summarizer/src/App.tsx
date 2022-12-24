@@ -69,7 +69,6 @@ function App() {
     if (file == null) return;
     console.log(file);
     setFile(() => file);
-    // setUploaded((prev) => !prev);
   };
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
@@ -92,13 +91,20 @@ function App() {
   };
 
   // TODO - Send to server
-  const handleFileSubmit = () => {
+  // Always shows as undefined on server side
+  const handleFileSubmit = async () => {
     if (!file) {
       console.log("Err");
       return;
     }
 
-    setSendFile(() => file);
+    const data = new FormData();
+    data.append("file", await file);
+    const response = await fetch(`${apiURL}uploadFile`, {
+      method: "POST",
+      body: data,
+    });
+    if (response) setError(response.statusText);
   };
 
   useEffect(() => {
@@ -109,18 +115,6 @@ function App() {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
-
-  useEffect(() => {
-    if (sendFile == undefined) return;
-
-    console.log(`sending: ${sendFile.name}`);
-    const data = new FormData();
-    data.append("file", sendFile, `${sendFile.name}`);
-    axios.post(`${apiURL}uploadFile`, data).then((res) => {
-      // console.log(res.statusText);
-      setError(res.statusText);
-    });
-  }, [sendFile]);
 
   const cardStyle = {
     minHeight: "200px",
