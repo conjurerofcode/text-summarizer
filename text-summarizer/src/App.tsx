@@ -5,18 +5,14 @@ import {
   useCallback,
   ChangeEvent,
 } from "react";
-import {
-  Card,
-  Input,
-  InputLabel,
-  Button,
-  FormControl,
-  CardContent,
-  Grid,
-  TextField,
-} from "@mui/material";
+import { Card, Input, InputLabel, Button } from "@mui/material";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
+import FormControl from "@mui/material/FormControl";
+import CardContent from "@mui/material/CardContent";
+import Grid from "@mui/material/Grid";
+import TextField from "@mui/material/TextField";
+import { useDropzone } from "react-dropzone";
 import Dropzone from "./Components/Dropzone";
 
 const allowedFiles = ["text/plain", "image/png", "image/jpg", "image/jpeg"];
@@ -26,10 +22,13 @@ const futureAllowedFiles = [
   "application/pdf",
 ];
 
+// TODO - Fix theme (Font, colors, etc...)
+
 function App() {
   const [dimensions, setDimensions] = useState({
     height: window.innerHeight,
     width: window.innerWidth,
+    scale: 1,
   });
   const [file, setFile] = useState<File>();
 
@@ -37,6 +36,7 @@ function App() {
     setDimensions({
       height: window.innerHeight * 0.35,
       width: window.innerWidth * 0.35,
+      scale: window.innerWidth >= 1920 ? 1.3 : 1,
     });
   };
 
@@ -92,13 +92,16 @@ function App() {
     minWidth: "400px",
     height: dimensions.height,
     width: dimensions.width,
-    backgroundColor: "grey",
     marginTop: "10%",
-    boxShadow: "5px 5px 7px 3px rgba(0, 0, 0, .2)",
+    boxShadow: "0px 0px 7px 3px rgba(255, 255, 255, .2)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     flexdirection: "column",
+    transform: `scale(${dimensions.scale}, ${dimensions.scale})`,
+    borderRadius: "30px",
+    backgroundColor: "rgba(255, 255, 255, .10)",
+    backdropFilter: "blur(5px)",
   };
 
   const dropStyle = {
@@ -107,9 +110,20 @@ function App() {
     borderWidth: "2px",
   };
 
+  const titleStyle: CSSProperties = {
+    position: "absolute",
+    color: "white",
+    top: 0,
+    fontSize: "4em",
+    textShadow: "0px 0px 7px rgba(255, 255, 255, .75)",
+  };
+
   return (
     <div style={pageStyle}>
-      <Card variant="outlined" style={cardStyle}>
+      <div className="bg" />
+      <h1 style={titleStyle}>Document Summarizer-er</h1>
+
+      <Card style={cardStyle}>
         <form>
           <CardContent>
             <Grid
