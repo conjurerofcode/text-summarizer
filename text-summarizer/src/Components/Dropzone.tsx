@@ -11,13 +11,15 @@ const baseStyle: CSSProperties = {
   alignItems: "center",
   padding: "20px",
   borderWidth: 2,
-  borderRadius: 2,
-  borderColor: "grey",
+  borderRadius: "20px",
+  borderColor: "rgb(0, 0, 0, 0.75",
   borderStyle: "dashed",
-  backgroundColor: "#fafafa",
-  color: "#bdbdbd",
+  backgroundColor: "rgb(255, 255, 255, 0.5)",
+  color: "white",
   outline: "none",
   transition: "border .24s ease-in-out",
+  height: "100px",
+  width: "350px",
 };
 
 const focusedStyle = {
@@ -40,7 +42,11 @@ const Dropzone: React.FC<DropzoneProps> = ({ fileHandler }) => {
     isDragAccept,
     isDragReject,
     acceptedFiles,
-  } = useDropzone({ accept: { "image/*": [] } });
+  } = useDropzone({
+    noKeyboard: true,
+    noClick: true,
+    accept: { "image/*": [] },
+  });
 
   const style = useMemo(
     () => ({
@@ -69,9 +75,7 @@ const Dropzone: React.FC<DropzoneProps> = ({ fileHandler }) => {
     >
       <input {...getInputProps()} />
 
-      <p>Drag 'n' drop some files here, or click to select files</p>
-
-      {/* <ul>{files}</ul> */}
+      <p>Drag a file here</p>
     </div>
   );
 };

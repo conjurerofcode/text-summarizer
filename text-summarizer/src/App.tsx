@@ -5,59 +5,67 @@ import {
   useCallback,
   ChangeEvent,
 } from "react";
-import { Card, Input, InputLabel, Button } from "@mui/material";
-import reactLogo from "./assets/react.svg";
+import { Card, Input, InputLabel, Button, CardContent } from "@mui/material";
 import "./App.css";
-import FormControl from "@mui/material/FormControl";
-import CardContent from "@mui/material/CardContent";
 import Grid from "@mui/material/Grid";
-import TextField from "@mui/material/TextField";
-import { useDropzone } from "react-dropzone";
 import Dropzone from "./Components/Dropzone";
+import { useTransition, animated } from "react-spring";
 
-const allowedFiles = ["text/plain", "image/png", "image/jpg", "image/jpeg"];
-const futureAllowedFiles = [
+const allowedFiles = [
+  "text/plain",
+  "image/png",
+  "image/jpg",
+  "image/jpeg",
   "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/pdf",
 ];
+const pageStyle: CSSProperties = {
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
 
 // TODO - Fix theme (Font, colors, etc...)
 
 function App() {
-  const [dimensions, setDimensions] = useState({
+  const [file, setFile] = useState<File>();
+
+  const [style, setStyle] = useState({
     height: window.innerHeight,
     width: window.innerWidth,
     scale: 1,
+    titleSize: "4em",
   });
-  const [file, setFile] = useState<File>();
+
+  const transition = useTransition(file == undefined, {
+    transitionDelay: 100,
+    config: { mass: 1, tension: 400, friction: 8, clamp: true },
+    from: { opacity: 0, y: 150 },
+    enter: { opacity: 1, y: 200 },
+    leave: { opacity: 0, y: 250 },
+    exitBeforeEnter: true,
+  });
 
   const handleResize = () => {
-    setDimensions({
+    setStyle({
       height: window.innerHeight * 0.35,
-      width: window.innerWidth * 0.35,
+      width:
+        window.innerWidth >= 1920
+          ? window.innerWidth * 0.35
+          : window.innerWidth * 0.55,
       scale: window.innerWidth >= 1920 ? 1.3 : 1,
+      titleSize: window.innerWidth >= 1920 ? "4em" : "3em",
     });
   };
 
-  const handleFileSubmit = () => {
-    if (!file) {
-      console.log("Err");
-      return;
-    }
-    alert(file.name);
-  };
   const handleDragEvent = (e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.items) return;
     const file = e.dataTransfer.items[0].getAsFile();
     if (file == null) return;
     console.log(file);
     setFile(file);
+    // setUploaded((prev) => !prev);
   };
-
-  useEffect(() => {
-    console.log("useEffect: File ran");
-  }, [file]);
 
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
@@ -78,6 +86,15 @@ function App() {
     setFile(file);
   };
 
+  // TODO - Send to server
+  const handleFileSubmit = () => {
+    if (!file) {
+      console.log("Err");
+      return;
+    }
+    alert(file.name);
+  };
+
   useEffect(() => {
     window.addEventListener("resize", handleResize);
     handleResize();
@@ -90,31 +107,27 @@ function App() {
   const cardStyle = {
     minHeight: "200px",
     minWidth: "400px",
-    height: dimensions.height,
-    width: dimensions.width,
-    marginTop: "10%",
+    height: style.height,
+    width: style.width,
+    marginTop: "17%",
     boxShadow: "0px 0px 7px 3px rgba(255, 255, 255, .2)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     flexdirection: "column",
-    transform: `scale(${dimensions.scale}, ${dimensions.scale})`,
+    transform: `scale(${style.scale}, ${style.scale})`,
     borderRadius: "30px",
     backgroundColor: "rgba(255, 255, 255, .10)",
     backdropFilter: "blur(5px)",
-  };
-
-  const dropStyle = {
-    height: "75px",
-    width: "150px",
-    borderWidth: "2px",
+    color: "white",
+    fontSize: "1.5em",
   };
 
   const titleStyle: CSSProperties = {
     position: "absolute",
     color: "white",
-    top: 0,
-    fontSize: "4em",
+    top: 10,
+    fontSize: style.titleSize,
     textShadow: "0px 0px 7px rgba(255, 255, 255, .75)",
   };
 
@@ -122,53 +135,83 @@ function App() {
     <div style={pageStyle}>
       <div className="bg" />
       <h1 style={titleStyle}>Document Summarizer-er</h1>
-
-      <Card style={cardStyle}>
-        <form>
-          <CardContent>
-            <Grid
-              container
-              justifyItems="center"
-              alignItems="center"
-              spacing={2}
-              direction="column"
-            >
-              <Grid item>
-                <Dropzone fileHandler={handleDragEvent} />
-              </Grid>
-              <Grid item>
-                <Button
-                  style={{ marginRight: "35px" }}
-                  variant="contained"
-                  component="label"
+      {transition((transitionStyle, item) =>
+        item ? (
+          <animated.div style={transitionStyle}>
+            <Card style={cardStyle}>
+              <form>
+                <CardContent>
+                  <Grid
+                    container
+                    justifyItems="center"
+                    alignItems="center"
+                    spacing={2}
+                    direction="column"
+                  >
+                    <Grid item>
+                      <Dropzone fileHandler={handleDragEvent} />
+                    </Grid>
+                    <Grid item></Grid>
+                    <Grid item>
+                      <Button
+                        style={{ marginRight: "35px" }}
+                        variant="contained"
+                        component="label"
+                      >
+                        Or Upload Here
+                        <input type="file" hidden onChange={handleFileUpload} />
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </CardContent>
+              </form>
+            </Card>
+          </animated.div>
+        ) : (
+          <animated.div style={transitionStyle}>
+            <Card style={cardStyle}>
+              <CardContent>
+                <Grid
+                  container
+                  justifyItems="center"
+                  alignItems="center"
+                  spacing={5}
+                  direction="column"
                 >
-                  Upload File
-                  <input type="file" hidden onChange={handleFileUpload} />
-                </Button>
-                <Button
-                  variant="contained"
-                  component="label"
-                  onClick={handleFileSubmit}
-                >
-                  Submit
-                </Button>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </form>
-      </Card>
+                  <Grid item>Name: {file?.name}</Grid>
+                  <Grid item>Size: {file?.size}</Grid>
+                  <Grid item>Type: {file?.type}</Grid>
+                  <Grid item>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      onClick={handleFileSubmit}
+                      style={{ marginRight: "15px" }}
+                    >
+                      Submit
+                    </Button>
+                    <Button
+                      variant="contained"
+                      component="label"
+                      onClick={() => {
+                        setFile(undefined);
+                      }}
+                    >
+                      Cancel{" "}
+                    </Button>
+                  </Grid>
+                </Grid>
+              </CardContent>
+            </Card>
+          </animated.div>
+        )
+      )}
     </div>
   );
 }
 
-const pageStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-};
-
 export default App;
 
-//                 <Dropzone />
-//               </Grid>
-//             </Grid>
+// const futureAllowedFiles = [
+//   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+// ];
