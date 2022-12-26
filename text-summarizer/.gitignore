@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+/Components/Backup.tsx
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +23,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+
+# Flask server
+../flask-server/__pycache__
+../flask-server/env
+__pycache__
+env

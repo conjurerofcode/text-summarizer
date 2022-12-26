@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   ChangeEvent,
+  useRef,
 } from "react";
 import { Card, Input, InputLabel, Button, CardContent } from "@mui/material";
 import axios from "axios";
@@ -11,6 +12,12 @@ import "./App.css";
 import Grid from "@mui/material/Grid";
 import Dropzone from "./Components/Dropzone";
 import { useTransition, animated } from "react-spring";
+import {
+  ImageSources,
+  extractTextFromFile,
+  getImageSource,
+  imageToText,
+} from "./Components/Utilities";
 
 const allowedFiles = [
   "text/plain",
@@ -26,28 +33,43 @@ const pageStyle: CSSProperties = {
   alignItems: "center",
 };
 
+const isImage = (file: File): boolean => {
+  const mimeTypes = ["image/png", "image/jpg", "image/jpeg"];
+  if (mimeTypes.includes(file.type)) return true;
+  else return false;
+};
+
 const apiURL = "http://localhost:4321/";
 
 // TODO - Fix theme (Font, colors, etc...)
 
 function App() {
   const [file, setFile] = useState<File>();
-  const [sendFile, setSendFile] = useState<File>();
-  const [error, setError] = useState("No Errors");
-
+  const [error, setError] = useState("");
+  const [iconSrc, setIconSrc] = useState(ImageSources.default);
   const [style, setStyle] = useState({
     height: window.innerHeight,
     width: window.innerWidth,
     scale: 1,
     titleSize: "4em",
   });
+  const [returnedText, setReturnedText] = useState("");
 
   const transition = useTransition(file == undefined, {
     transitionDelay: 100,
     config: { mass: 1, tension: 400, friction: 8, clamp: true },
-    from: { opacity: 0, y: 150 },
-    enter: { opacity: 1, y: 200 },
-    leave: { opacity: 0, y: 250 },
+    from: { opacity: 0, y: -20 },
+    enter: { opacity: 1, y: 0 },
+    leave: { opacity: 0, y: 20 },
+    exitBeforeEnter: true,
+  });
+
+  const largerTransition = useTransition(returnedText === "", {
+    transitionDelay: 100,
+    config: { mass: 1, tension: 400, friction: 8, clamp: true },
+    from: { opacity: 0, y: -20 },
+    enter: { opacity: 1, y: 0 },
+    leave: { opacity: 0, y: 20 },
     exitBeforeEnter: true,
   });
 
@@ -63,15 +85,17 @@ function App() {
     });
   };
 
-  const handleDragEvent = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragEvent = async (e: React.DragEvent<HTMLDivElement>) => {
     if (!e.dataTransfer.items) return;
     const file = e.dataTransfer.items[0].getAsFile();
     if (file == null) return;
-    console.log(file);
-    setFile(() => file);
+
+    const src = getImageSource(file);
+    setIconSrc((prev) => src);
+    setFile((prev) => file);
   };
 
-  const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
 
     if (!e.target.files) {
@@ -86,25 +110,40 @@ function App() {
       return;
     }
 
-    console.log(file);
-    setFile(() => file);
+    const src = getImageSource(file);
+    setIconSrc((prev) => src);
+    setFile((prev) => file);
   };
 
   // TODO - Send to server
   // Always shows as undefined on server side
   const handleFileSubmit = async () => {
-    if (!file) {
-      console.log("Err");
+    if (!file || file == undefined) return;
+
+    // ---------- testing -----------------
+    if (isImage(file)) {
+      const apiCall = await imageToText(file);
+      console.log(apiCall);
+      setReturnedText((prev) => apiCall.data);
       return;
     }
-
-    const data = new FormData();
-    data.append("file", await file);
-    const response = await fetch(`${apiURL}uploadFile`, {
-      method: "POST",
-      body: data,
-    });
-    if (response) setError(response.statusText);
+    // ---------- testing -----------------
+    console.log(file);
+    const text = await extractTextFromFile(file);
+    // console.log(text.slice(0, 20));
+    axios({
+      method: "GET",
+      url: "http://127.0.0.1:5000/imageToText",
+    })
+      .then((response) => {
+        const res = response.data;
+        console.log(res);
+      })
+      .catch((err) => {
+        if (err.response) {
+          console.log(err.response);
+        }
+      });
   };
 
   useEffect(() => {
@@ -116,18 +155,23 @@ function App() {
     };
   }, []);
 
+  // useEffect(() => {
+  //   if (!file || file == undefined) return;
+  //   const src = getImageSource(file);
+  //   setIconSrc((prev) => src);
+  // }, [file]);
+
   const cardStyle = {
     minHeight: "200px",
     minWidth: "400px",
     height: style.height,
     width: style.width,
-    marginTop: "17%",
     boxShadow: "0px 0px 7px 3px rgba(255, 255, 255, .2)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     flexdirection: "column",
-    transform: `scale(${style.scale}, ${style.scale})`,
+    transform: `scale(${style.scale}, ${style.scale}) translate(0, 75%)`,
     borderRadius: "30px",
     backgroundColor: "rgba(255, 255, 255, .10)",
     backdropFilter: "blur(5px)",
@@ -143,83 +187,119 @@ function App() {
     textShadow: "0px 0px 7px rgba(255, 255, 255, .75)",
   };
 
+  const documentPreviewStyle = {
+    background: "linear-gradient(to bottom, white, transparent)",
+    height: "150px",
+    width: "400px",
+    // padding: "20px";
+  };
+
+  const iconStyle = {
+    height: "50px",
+    width: "50px",
+  };
+
   return (
     <div style={pageStyle}>
       <div className="bg" />
       <h1 style={titleStyle}>Document Summarizer-er</h1>
-      {transition((transitionStyle, item) =>
-        item ? (
-          <animated.div style={transitionStyle}>
-            <Card style={cardStyle}>
-              <form>
-                <CardContent>
-                  <Grid
-                    container
-                    justifyItems="center"
-                    alignItems="center"
-                    spacing={2}
-                    direction="column"
-                  >
-                    <Grid item>
-                      <Dropzone fileHandler={handleDragEvent} />
+      <form method="post" encType="multipart/form-data">
+        {returnedText === "" ? (
+          <Card style={cardStyle}>
+            {transition((transitionStyle, item) =>
+              item ? (
+                <animated.div style={transitionStyle}>
+                  <CardContent>
+                    <Grid
+                      container
+                      justifyItems="center"
+                      alignItems="center"
+                      spacing={4}
+                      direction="column"
+                    >
+                      <Grid item>
+                        <Dropzone fileHandler={handleDragEvent} />
+                      </Grid>
+
+                      <Grid item>
+                        <Button
+                          style={{ marginRight: "35px" }}
+                          variant="contained"
+                          component="label"
+                        >
+                          <input
+                            id="file"
+                            type="file"
+                            hidden
+                            onChange={handleFileUpload}
+                          />
+                          Or Upload Here
+                        </Button>
+                      </Grid>
                     </Grid>
-                    <Grid item></Grid>
-                    <Grid item>
-                      <Button
-                        style={{ marginRight: "35px" }}
-                        variant="contained"
-                        component="label"
-                      >
-                        Or Upload Here
-                        <input type="file" hidden onChange={handleFileUpload} />
-                      </Button>
+                  </CardContent>
+                </animated.div>
+              ) : (
+                <animated.div style={transitionStyle}>
+                  <CardContent>
+                    <Grid
+                      container
+                      justifyItems="center"
+                      alignItems="center"
+                      spacing={2}
+                      direction="column"
+                    >
+                      <Grid item>
+                        Name: {file?.name} Size: {file?.size} MB
+                      </Grid>
+
+                      <Grid item>
+                        <img style={iconStyle} src={iconSrc}></img>
+                      </Grid>
+                      <Grid item>
+                        <Button
+                          variant="contained"
+                          style={{ marginRight: "15px" }}
+                          onClick={() => {
+                            handleFileSubmit();
+                          }}
+                        >
+                          Submit
+                        </Button>
+                        <Button
+                          variant="contained"
+                          component="label"
+                          onClick={() => {
+                            setFile((prev) => undefined);
+                          }}
+                        >
+                          Cancel{" "}
+                        </Button>
+                      </Grid>
                     </Grid>
-                  </Grid>
-                </CardContent>
-              </form>
-            </Card>
-          </animated.div>
+                  </CardContent>
+                </animated.div>
+              )
+            )}
+          </Card>
         ) : (
-          <animated.div style={transitionStyle}>
-            <Card style={cardStyle}>
-              <CardContent>
-                <Grid
-                  container
-                  justifyItems="center"
-                  alignItems="center"
-                  spacing={5}
-                  direction="column"
-                >
-                  <Grid item>Name: {file?.name}</Grid>
-                  <Grid item>Size: {file?.size}</Grid>
-                  <Grid item>Type: {file?.type}</Grid>
-                  <Grid item>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      onClick={handleFileSubmit}
-                      style={{ marginRight: "15px" }}
-                    >
-                      Submit
-                    </Button>
-                    <Button
-                      variant="contained"
-                      component="label"
-                      onClick={() => {
-                        setFile(undefined);
-                      }}
-                    >
-                      Cancel{" "}
-                    </Button>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          </animated.div>
-        )
-      )}
+          <Card style={cardStyle}>
+            <CardContent>
+              <div>{returnedText}</div>
+              <Button
+                variant="contained"
+                component="label"
+                onClick={() => {
+                  setReturnedText((prev) => "");
+                }}
+              >
+                Cancel
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </form>
       <div style={{ position: "absolute", color: "white", bottom: "20%" }}>
-        {" "}
         {error}
       </div>
     </div>
